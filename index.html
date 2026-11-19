@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Contador BAAR – Ziehl-Neelsen</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#b3261e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Contador BAAR">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#f6f5f2;--card:#fff;--ink:#1d1d1b;--muted:#6b6a66;--line:#e2e0da;
+  --accent:#b3261e;--accent-ink:#fff;--ok:#1f6f43;--warn:#8a5a00;--chip:#efede8;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#141413;--card:#1e1e1c;--ink:#f1efe9;--muted:#a3a19b;--line:#33322f;
+  --accent:#e0574d;--accent-ink:#fff;--ok:#5cc58a;--warn:#e3b04b;--chip:#2a2927;}
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+main{max-width:520px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top)) 14px calc(40px + env(safe-area-inset-bottom))}
+h1{font-size:17px;margin:2px 0 12px;font-weight:650}
+h1 small{color:var(--muted);font-weight:400}
+.row{display:flex;gap:8px;align-items:center}
+input[type=text]{flex:1;font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
+.stat b{display:block;font-size:28px;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat span{font-size:12px;color:var(--muted)}
+.current{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.current b{font-size:22px;font-variant-numeric:tabular-nums}
+.progress{height:8px;background:var(--chip);border-radius:6px;overflow:hidden;position:relative;margin:4px 0 2px}
+.progress i{display:block;height:100%;background:var(--accent);width:0;transition:width .15s}
+.ticks{position:relative;height:16px;font-size:11px;color:var(--muted)}
+.ticks span{position:absolute;transform:translateX(-50%)}
+button{font:inherit;border:0;border-radius:14px;cursor:pointer;color:var(--ink);background:var(--chip)}
+button:active{transform:scale(.98)}
+.big{width:100%;padding:0;height:150px;font-size:30px;font-weight:700;background:var(--accent);color:var(--accent-ink);margin:6px 0 8px;user-select:none}
+.big small{display:block;font-size:14px;font-weight:500;opacity:.85}
+.next{width:100%;height:84px;font-size:22px;font-weight:650;background:var(--ink);color:var(--bg);user-select:none}
+.quick{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:8px 0}
+.quick button{height:44px;font-size:15px;font-weight:600}
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.tools button{height:44px;font-size:15px}
+.result{border-radius:14px;padding:14px;margin:12px 0;border:2px solid var(--line);background:var(--card)}
+.result.stop{border-color:var(--ok)}
+.result .lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.result .val{font-size:26px;font-weight:750;margin:2px 0}
+.result.stop .val{color:var(--ok)}
+.result .hint{font-size:14px;color:var(--muted)}
+.result .actions{display:flex;gap:8px;margin-top:10px}
+.result .actions button{flex:1;height:44px;font-weight:600}
+.result .actions .primary{background:var(--ok);color:#fff}
+.fields{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px}
+.fields span{min-width:26px;padding:2px 4px;border-radius:6px;background:var(--chip);font-size:12px;text-align:center;font-variant-numeric:tabular-nums}
+.fields span.pos{background:var(--accent);color:var(--accent-ink)}
+details{margin-top:18px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+summary{font-weight:600;cursor:pointer}
+table{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+td,th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left;font-variant-numeric:tabular-nums}
+th{color:var(--muted);font-weight:500;font-size:12px}
+.scale td{font-size:13px}
+.muted{color:var(--muted);font-size:13px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:20px}
+.modal.on{display:flex}
+.modal div{background:var(--card);border-radius:14px;padding:16px;max-width:340px;width:100%}
+.modal p{margin:0 0 14px}
+.modal .row button{flex:1;height:44px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Contador BAAR <small>· Ziehl-Neelsen · escala OMS</small></h1>
+
+  <div class="row">
+    <input id="sid" type="text" placeholder="ID muestra / lámina" autocomplete="off">
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b id="sF">0</b><span>campos</span></div>
+    <div class="stat"><b id="sT">0</b><span>BAAR totales</span></div>
+    <div class="stat"><b id="sM">0</b><span>BAAR/campo</span></div>
+  </div>
+
+  <div class="progress"><i id="bar"></i></div>
+  <div class="ticks"><span style="left:20%">20</span><span style="left:50%">50</span><span style="left:100%;transform:translateX(-100%)">100</span></div>
+
+  <div class="result" id="res">
+    <div class="lbl">Estado</div>
+    <div class="val" id="resVal">Leyendo…</div>
+    <div class="hint" id="resHint"></div>
+    <div class="actions" id="resAct" style="display:none">
+      <button class="primary" id="btnSave">Guardar y nueva</button>
+      <button id="btnContinue">Seguir leyendo</button>
+    </div>
+  </div>
+
+  <div class="current"><span>Campo actual (n.º <span id="cN">1</span>)</span><b id="cB">0 BAAR</b></div>
+
+  <button class="big" id="btnPlus">+1 BAAR<small>tocá por cada bacilo del campo</small></button>
+  <button class="next" id="btnNext">Campo listo → siguiente</button>
+
+  <div class="muted" style="margin-top:10px">Cargar campo de una (BAAR en el campo):</div>
+  <div class="quick" id="quick"></div>
+
+  <div class="tools">
+    <button id="btnUndo">↶ Deshacer</button>
+    <button id="btnReset">Reiniciar lámina</button>
+  </div>
+
+  <div class="fields" id="fields"></div>
+
+  <details id="histBox">
+    <summary>Historial (<span id="hN">0</span>)</summary>
+    <table><thead><tr><th>Muestra</th><th>Campos</th><th>BAAR</th><th>Resultado</th></tr></thead><tbody id="hBody"></tbody></table>
+    <div class="tools">
+      <button id="btnCopy">Copiar (para Excel)</button>
+      <button id="btnClear">Borrar historial</button>
+    </div>
+    <p class="muted">Queda guardado solo en este navegador. Copialo al registro al terminar.</p>
+  </details>
+
+  <details>
+    <summary>Escala de lectura</summary>
+    <table class="scale">
+      <tr><td>0 BAAR en 100 campos</td><td><b>Negativo</b></td></tr>
+      <tr><td>1–9 BAAR en 100 campos</td><td><b>N.º exacto</b></td></tr>
+      <tr><td>10–99 BAAR en 100 campos</td><td><b>+</b></td></tr>
+      <tr><td>1–10 BAAR/campo en 50 campos</td><td><b>++</b></td></tr>
+      <tr><td>&gt;10 BAAR/campo en 20 campos</td><td><b>+++</b></td></tr>
+    </table>
+  </details>
+</main>
+
+<div class="toast" id="toast"></div>
+<div class="modal" id="modal"><div><p id="mTxt"></p><div class="row"><button id="mNo">Cancelar</button><button id="mYes" style="background:var(--accent);color:#fff">Sí</button></div></div></div>
+
+<script>
+const $=id=>document.getElementById(id);
+let fields=[], cur=0, hist=[], undo=[], ignoredStop=null;
+
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},
+             set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+
+function buzz(ms){try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}}
+function toast(t){const el=$('toast');el.textContent=t;el.classList.add('on');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('on'),1600)}
+function ask(txt){return new Promise(r=>{$('mTxt').textContent=txt;$('modal').classList.add('on');
+  $('mYes').onclick=()=>{$('modal').classList.remove('on');r(true)};$('mNo').onclick=()=>{$('modal').classList.remove('on');r(false)}})}
+
+function evaluate(){
+  const n=fields.length, total=fields.reduce((a,b)=>a+b,0), mean=n?total/n:0;
+  if(n>=20 && mean>10) return {stop:true,res:'Positivo +++',detail:`${mean.toFixed(1)} BAAR/campo en ${n} campos`};
+  if(n>=50 && mean>=1) return {stop:true,res:'Positivo ++',detail:`${mean.toFixed(1)} BAAR/campo en ${n} campos`};
+  if(n>=100){
+    if(total===0) return {stop:true,res:'Negativo',detail:`0 BAAR en ${n} campos`};
+    if(total<=9) return {stop:true,res:`Positivo: ${total} BAAR en 100 campos`,detail:'Informar n.º exacto'};
+    if(total<=99) return {stop:true,res:'Positivo +',detail:`${total} BAAR en ${n} campos`};
+    return {stop:true,res:'Positivo ++',detail:`${mean.toFixed(1)} BAAR/campo en ${n} campos`};
+  }
+  let next = n<20?20:(n<50?50:100);
+  let hint;
+  if(n<20) hint=`Control a los 20 campos (faltan ${20-n}). Si da >10 BAAR/campo → +++`;
+  else if(n<50) hint=`Control a los 50 campos (faltan ${50-n}). Si da 1–10 BAAR/campo → ++`;
+  else hint=`Seguí hasta 100 campos (faltan ${100-n}).`;
+  return {stop:false,res:'Leyendo…',detail:hint,next};
+}
+
+function render(){
+  const n=fields.length, total=fields.reduce((a,b)=>a+b,0);
+  $('sF').textContent=n; $('sT').textContent=total;
+  $('sM').textContent=n?(total/n).toFixed(n&&total/n<10?2:1):'0';
+  $('bar').style.width=Math.min(100,n)+'%';
+  $('cN').textContent=n+1; $('cB').textContent=cur+' BAAR';
+  const e=evaluate(), key=e.res+'|'+n;
+  const showStop=e.stop && ignoredStop!==e.res;
+  $('res').classList.toggle('stop',showStop);
+  $('resVal').textContent=showStop?e.res:'Leyendo…';
+  $('resHint').textContent=showStop?(e.detail+' · podés cortar la lectura'):(e.stop?`Lectura extendida (${e.res})`:e.detail);
+  $('resAct').style.display=e.stop?'flex':'none';
+  $('btnContinue').style.display=showStop && n<100?'block':'none';
+  $('fields').innerHTML=fields.map((v,i)=>`<span class="${v?'pos':''}" title="Campo ${i+1}">${v}</span>`).join('');
+  renderHist();
+  store.set('baar_state',{fields,cur,id:$('sid').value,ignoredStop});
+}
+
+function renderHist(){
+  $('hN').textContent=hist.length;
+  $('hBody').innerHTML=hist.slice().reverse().map(h=>`<tr><td>${esc(h.id||'—')}<br><span class="muted">${h.fecha}</span></td><td>${h.campos}</td><td>${h.total}</td><td><b>${esc(h.res)}</b></td></tr>`).join('');
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+function pushUndo(){undo.push(JSON.stringify({fields,cur,ignoredStop})); if(undo.length>300) undo.shift()}
+
+function closeField(v){
+  pushUndo();
+  const before=evaluate().stop;
+  fields.push(v); cur=0;
+  const e=evaluate();
+  if(e.stop && !before){buzz([60,60,160]); toast('Llegaste a resultado: '+e.res)} else buzz(25);
+  render();
+}
+
+$('btnPlus').onclick=()=>{pushUndo(); cur++; buzz(15); render()};
+$('btnNext').onclick=()=>closeField(cur);
+
+const q=$('quick');
+[0,1,2,3,4,5,6,8,10,12,15,20].forEach(v=>{const b=document.createElement('button');b.textContent=v;b.onclick=()=>{cur=0;closeField(v)};q.appendChild(b)});
+
+$('btnUndo').onclick=()=>{const s=undo.pop(); if(!s){toast('Nada para deshacer');return}
+  const o=JSON.parse(s); fields=o.fields; cur=o.cur; ignoredStop=o.ignoredStop; render()};
+
+$('btnReset').onclick=async()=>{ if(!fields.length&&!cur) return;
+  if(await ask('¿Reiniciar la lámina actual sin guardar?')){fields=[];cur=0;undo=[];ignoredStop=null;render()}};
+
+$('btnContinue').onclick=()=>{ignoredStop=evaluate().res; render()};
+
+$('btnSave').onclick=()=>{
+  const e=evaluate(), total=fields.reduce((a,b)=>a+b,0), d=new Date();
+  hist.push({id:$('sid').value.trim(),fecha:d.toLocaleDateString('es-AR')+' '+d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}),campos:fields.length,total,res:e.res});
+  store.set('baar_hist',hist);
+  fields=[];cur=0;undo=[];ignoredStop=null;$('sid').value='';
+  toast('Guardado'); render(); $('sid').focus();
+};
+
+$('btnCopy').onclick=async()=>{
+  const txt=['Muestra\tFecha\tCampos\tBAAR\tResultado',...hist.map(h=>[h.id,h.fecha,h.campos,h.total,h.res].join('\t'))].join('\n');
+  try{await navigator.clipboard.writeText(txt);toast('Copiado')}catch(e){toast('No se pudo copiar')}
+};
+$('btnClear').onclick=async()=>{ if(!hist.length) return;
+  if(await ask('¿Borrar todo el historial?')){hist=[];store.set('baar_hist',hist);render()}};
+
+$('sid').addEventListener('input',()=>store.set('baar_state',{fields,cur,id:$('sid').value,ignoredStop}));
+
+// Teclado (por si usás teclado/clicker): Espacio o "+" = +1 BAAR, Enter = siguiente campo, Z/Backspace = deshacer
+document.addEventListener('keydown',ev=>{
+  if(ev.target.tagName==='INPUT') { if(ev.key==='Enter'){ev.target.blur()} return; }
+  if(ev.key===' '||ev.key==='+'){ev.preventDefault();$('btnPlus').click()}
+  else if(ev.key==='Enter'){ev.preventDefault();$('btnNext').click()}
+  else if(ev.key==='z'||ev.key==='Backspace'){ev.preventDefault();$('btnUndo').click()}
+});
+
+(function init(){
+  hist=store.get('baar_hist',[]);
+  const s=store.get('baar_state',null);
+  if(s){fields=s.fields||[];cur=s.cur||0;ignoredStop=s.ignoredStop||null;$('sid').value=s.id||''}
+  render();
+})();
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})})}
+</script>
+</body>
+</html>
